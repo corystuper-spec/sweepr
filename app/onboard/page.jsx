@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 const C = {
   bg:        '#080A0C',
@@ -24,6 +25,7 @@ function OnboardInner() {
   const name   = params.get('name')  || '';
 
   const [supabase]  = useState(() => typeof window !== 'undefined' ? createClient() : null);
+  const isMobile = useIsMobile();
   const [pw, setPw]         = useState('');
   const [pw2, setPw2]       = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,7 +84,7 @@ function OnboardInner() {
 
       <div style={{
         background: C.surface, border: `1px solid ${C.border}`,
-        borderRadius: 24, padding: '52px 44px', width: '100%', maxWidth: 460,
+        borderRadius: 24, padding: isMobile ? '32px 20px' : '52px 44px', width: '100%', maxWidth: 460,
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>

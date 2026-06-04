@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 const C = {
   bg:        '#080A0C',
@@ -84,6 +85,7 @@ function LoginPageInner() {
   const redirect = searchParams.get('redirect') || '/dashboard';
 
   const [supabase] = useState(() => typeof window !== 'undefined' ? createClient() : null);
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,7 +135,7 @@ function LoginPageInner() {
 
   return (
     <div style={s.page}>
-      <div style={s.card}>
+      <div style={{ ...s.card, padding: isMobile ? '32px 20px' : '48px 40px' }}>
         <a href="/" style={s.logo}>✦ Sweepr</a>
 
         {/* Tabs */}

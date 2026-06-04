@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 const C = {
   bg:        '#080A0C',
@@ -199,6 +200,7 @@ function MaskedSSN({ value, onChange }) {
 
 export default function ApplyPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -307,7 +309,7 @@ export default function ApplyPage() {
 
   return (
     <div style={s.page}>
-      <nav style={s.nav}>
+      <nav style={{ ...s.nav, padding: isMobile ? '0 16px' : '0 48px' }}>
         <a href="/join" style={s.logo}>✦ Sweepr</a>
         <span style={{ color: C.muted, fontSize: 14 }}>
           Step {step + 1} of {STEPS.length}
@@ -329,7 +331,7 @@ export default function ApplyPage() {
             <h2 style={s.h2}>Personal information</h2>
             <p style={s.sub}>This information is used for your background check and cleaner profile.</p>
 
-            <div style={s.row2}>
+            <div style={{ ...s.row2, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
               <Field label="First name">
                 <input style={s.input} placeholder="Jane" value={firstName} onChange={e => setFirstName(e.target.value)} autoFocus />
               </Field>
@@ -367,7 +369,7 @@ export default function ApplyPage() {
               <input style={s.input} placeholder="Denver" value={city} onChange={e => setCity(e.target.value)} />
             </Field>
 
-            <div style={s.row2}>
+            <div style={{ ...s.row2, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
               <Field label="State">
                 <select style={s.select} value={stateVal} onChange={e => setStateVal(e.target.value)}>
                   {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}

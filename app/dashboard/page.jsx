@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 const C = {
   bg:        '#080A0C',
@@ -247,6 +248,7 @@ function BookingCard({ booking, supabase, onRefresh }) {
 export default function DashboardPage() {
   const router = useRouter();
   const [supabase] = useState(() => typeof window !== 'undefined' ? createClient() : null);
+  const isMobile = useIsMobile();
 
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -307,28 +309,28 @@ export default function DashboardPage() {
 
   return (
     <div style={s.page}>
-      <nav style={s.nav}>
+      <nav style={{ ...s.nav, padding: isMobile ? '0 16px' : '0 48px' }}>
         <a href="/" style={s.logo}>✦ Sweepr</a>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
             onClick={() => router.push('/book')}
             style={{
               height: 38, borderRadius: 10, border: 'none',
               background: C.accent, color: '#080A0C', fontWeight: 700, fontSize: 14,
-              cursor: 'pointer', padding: '0 20px',
+              cursor: 'pointer', padding: isMobile ? '0 12px' : '0 20px',
             }}
           >
-            + Book a clean
+            {isMobile ? '+ Book' : '+ Book a clean'}
           </button>
           <button
             onClick={signOut}
             style={{
               height: 38, borderRadius: 10, border: `1px solid ${C.border}`,
               background: 'transparent', color: C.muted, fontSize: 14, cursor: 'pointer',
-              padding: '0 16px',
+              padding: '0 12px',
             }}
           >
-            Sign out
+            {isMobile ? '↩' : 'Sign out'}
           </button>
         </div>
       </nav>

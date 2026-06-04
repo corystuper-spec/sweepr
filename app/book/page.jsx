@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ADDONS, RECURRENCE, quote, standardPrice } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/client';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 // ─── Design tokens ─────────────────────────────────────────────────
 const C = {
@@ -127,6 +128,7 @@ function BookPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  const isMobile = useIsMobile();
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -284,9 +286,9 @@ function BookPageInner() {
 
   return (
     <div style={s.page}>
-      <div style={s.container}>
+      <div style={{ ...s.container, padding: isMobile ? '0 16px 120px' : '0 24px 120px' }}>
         {/* Header */}
-        <div style={s.header}>
+        <div style={{ ...s.header, padding: isMobile ? '16px 0 24px' : '24px 0 32px', marginBottom: isMobile ? 28 : 40 }}>
           <a href="/" style={s.logo}>✦ Sweepr</a>
           <div style={s.stepBar}>
             {STEPS.map((_, i) => (
@@ -473,9 +475,9 @@ function BookPageInner() {
               </div>
               <div>
                 <div style={{ fontSize: 14, color: C.muted, marginBottom: 12 }}>Arrival window</div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10 }}>
                   {TIME_SLOTS.map(slot => (
-                    <button key={slot} style={s.timeSlot(time === slot)} onClick={() => setTime(slot)}>
+                    <button key={slot} style={{ ...s.timeSlot(time === slot), flex: undefined }} onClick={() => setTime(slot)}>
                       {slot}
                     </button>
                   ))}

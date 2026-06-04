@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 const C = {
   bg:        '#080A0C',
@@ -17,13 +18,6 @@ const C = {
 
 const s = {
   page: { background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'Hanken Grotesk', system-ui, sans-serif" },
-  nav: {
-    position: 'sticky', top: 0, zIndex: 100,
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '0 48px', height: 72,
-    background: 'rgba(8,10,12,0.85)', backdropFilter: 'blur(16px)',
-    borderBottom: `1px solid ${C.border}`,
-  },
   logo: {
     fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
     fontWeight: 800, fontSize: 22, color: C.text, textDecoration: 'none',
@@ -48,20 +42,19 @@ const s = {
     color: C.text, fontSize: 15, cursor: 'pointer',
     fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
   },
-  section: { maxWidth: 1100, margin: '0 auto', padding: '0 48px' },
   sectionLabel: {
     fontSize: 12, fontWeight: 700, letterSpacing: '2px', color: C.accent,
     textTransform: 'uppercase', marginBottom: 16,
   },
   h1: {
     fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-    fontWeight: 800, fontSize: 'clamp(44px, 5.5vw, 72px)',
-    lineHeight: 1.05, letterSpacing: '-2.5px',
+    fontWeight: 800, fontSize: 'clamp(36px, 5.5vw, 72px)',
+    lineHeight: 1.05, letterSpacing: '-2px',
   },
   h2: {
     fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-    fontWeight: 800, fontSize: 'clamp(28px, 3.5vw, 44px)',
-    letterSpacing: '-1.5px',
+    fontWeight: 800, fontSize: 'clamp(24px, 3.5vw, 44px)',
+    letterSpacing: '-1px',
   },
   card: {
     background: C.surface, border: `1px solid ${C.border}`,
@@ -81,7 +74,12 @@ function cardHov(e, on) {
 
 export default function JoinPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [openFaq, setOpenFaq] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const px = isMobile ? '20px' : '48px';
+  const section = { maxWidth: 1100, margin: '0 auto', padding: `0 ${px}` };
 
   const perks = [
     { icon: '💵', title: '$28–$38 / hour', desc: 'Among the highest rates for independent cleaners in Denver. Your earnings grow with your rating.' },
@@ -95,8 +93,8 @@ export default function JoinPage() {
 
   const steps = [
     { num: '01', title: 'Create your account', desc: 'Sign up in 2 minutes. Tell us your name, service areas, and a bit about your experience.' },
-    { num: '02', title: 'Pass a background check', desc: 'We run a standard background check through a trusted provider. Most results come back within 2–3 business days. It\'s free for you.' },
-    { num: '03', title: 'Get approved & go live', desc: 'Once you\'re cleared, your profile goes active and job offers start coming in immediately.' },
+    { num: '02', title: 'Pass a background check', desc: "We run a standard background check through a trusted provider. Most results come back within 2–3 business days. It's free for you." },
+    { num: '03', title: 'Get approved & go live', desc: "Once you're cleared, your profile goes active and job offers start coming in immediately." },
     { num: '04', title: 'Accept jobs on your terms', desc: 'Review each job — address, size, date, and your payout — before accepting. No surprises.' },
   ];
 
@@ -111,7 +109,7 @@ export default function JoinPage() {
     },
     {
       q: 'Do I need to bring my own supplies?',
-      a: 'Most customers prefer you to use your own supplies so you can guarantee quality. Some customers will have supplies on hand. You can note your preference in your profile and we\'ll match accordingly.',
+      a: "Most customers prefer you to use your own supplies so you can guarantee quality. Some customers will have supplies on hand. You can note your preference in your profile and we'll match accordingly.",
     },
     {
       q: 'What if a customer cancels last minute?',
@@ -123,7 +121,7 @@ export default function JoinPage() {
     },
     {
       q: 'What if something goes wrong on a job?',
-      a: 'Contact our cleaner support line and we\'ll handle it. We have a resolution process for customer complaints and we always hear both sides before making any decisions.',
+      a: "Contact our cleaner support line and we'll handle it. We have a resolution process for customer complaints and we always hear both sides before making any decisions.",
     },
   ];
 
@@ -140,7 +138,13 @@ export default function JoinPage() {
   return (
     <div style={s.page}>
       {/* Nav */}
-      <nav style={s.nav}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: `0 ${px}`, height: 72,
+        background: 'rgba(8,10,12,0.85)', backdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${C.border}`,
+      }}>
         <a href="/" style={s.logo}>
           <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
             <path d="M14 2L15.8 10.2L24 12L15.8 13.8L14 22L12.2 13.8L4 12L12.2 10.2L14 2Z" fill="#5BD6A6" />
@@ -148,44 +152,67 @@ export default function JoinPage() {
           </svg>
           Sweepr
         </a>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button style={s.btnGhost} onClick={() => router.push('/')}>← Back to home</button>
+
+        {isMobile ? (
           <button
-            style={s.btnGreen}
-            onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
-            onClick={() => router.push('/apply')}
+            onClick={() => setMenuOpen(o => !o)}
+            style={{ background: 'none', border: 'none', color: C.text, fontSize: 22, cursor: 'pointer', padding: '8px' }}
           >
-            Apply now
+            {menuOpen ? '✕' : '☰'}
           </button>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button style={s.btnGhost} onClick={() => router.push('/')}>← Back to home</button>
+            <button
+              style={s.btnGreen}
+              onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
+              onClick={() => router.push('/apply')}
+            >
+              Apply now
+            </button>
+          </div>
+        )}
       </nav>
 
+      {/* Mobile dropdown menu */}
+      {isMobile && menuOpen && (
+        <div style={{
+          position: 'fixed', top: 72, left: 0, right: 0, zIndex: 99,
+          background: C.surface, borderBottom: `1px solid ${C.border}`,
+          padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <button style={{ ...s.btnGhost, width: '100%', textAlign: 'center' }} onClick={() => { router.push('/'); setMenuOpen(false); }}>← Back to home</button>
+          <button style={{ ...s.btnGreen, width: '100%', height: 48 }} onClick={() => { router.push('/apply'); setMenuOpen(false); }}>Apply now</button>
+        </div>
+      )}
+
       {/* Hero */}
-      <section style={{ ...s.section, paddingTop: 100, paddingBottom: 80 }}>
+      <section style={{ ...section, paddingTop: isMobile ? 60 : 100, paddingBottom: isMobile ? 56 : 80 }}>
         <div style={{ maxWidth: 760 }}>
           <div style={s.sectionLabel}>Join the Sweepr team</div>
-          <h1 style={{ ...s.h1, marginBottom: 28 }}>
+          <h1 style={{ ...s.h1, marginBottom: 24 }}>
             Turn your cleaning skills into{' '}
             <span style={{ color: C.accent }}>real income.</span>
           </h1>
-          <p style={{ fontSize: 20, color: C.muted, lineHeight: 1.7, marginBottom: 48, maxWidth: 580 }}>
+          <p style={{ fontSize: isMobile ? 16 : 20, color: C.muted, lineHeight: 1.7, marginBottom: 36, maxWidth: 580 }}>
             Join Denver's fastest-growing home cleaning network. We bring you the clients,
             handle the payments, and let you focus on what you do best.
           </p>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
-              style={s.btnGreenLg}
+              style={{ ...s.btnGreenLg, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
               onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
               onClick={() => router.push('/apply')}
             >
               Apply now — it's free →
             </button>
-            <span style={{ color: C.muted, fontSize: 14 }}>Takes 2 minutes · No experience minimum</span>
+            {!isMobile && <span style={{ color: C.muted, fontSize: 14 }}>Takes 2 minutes · No experience minimum</span>}
           </div>
+          {isMobile && <p style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>Takes 2 minutes · No experience minimum</p>}
         </div>
 
         {/* Stat pills */}
-        <div style={{ display: 'flex', gap: 20, marginTop: 64, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: isMobile ? 10 : 20, marginTop: isMobile ? 40 : 64, flexWrap: 'wrap' }}>
           {[
             { num: '$28–$38', label: 'Per hour average' },
             { num: '2–3 days', label: 'Background check' },
@@ -195,34 +222,38 @@ export default function JoinPage() {
           ].map(stat => (
             <div key={stat.label} style={{
               background: C.surface, border: `1px solid ${C.border}`,
-              borderRadius: 14, padding: '20px 28px',
+              borderRadius: 14, padding: isMobile ? '14px 16px' : '20px 28px',
+              flex: isMobile ? '1 1 calc(50% - 5px)' : undefined,
             }}>
               <div style={{
                 fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-                fontWeight: 800, fontSize: 28, color: C.accent, lineHeight: 1, marginBottom: 4,
+                fontWeight: 800, fontSize: isMobile ? 22 : 28, color: C.accent, lineHeight: 1, marginBottom: 4,
               }}>{stat.num}</div>
-              <div style={{ color: C.muted, fontSize: 13 }}>{stat.label}</div>
+              <div style={{ color: C.muted, fontSize: 12 }}>{stat.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Perks */}
-      <section style={{ ...s.section, paddingBottom: 100 }}>
+      <section style={{ ...section, paddingBottom: isMobile ? 64 : 100 }}>
         <div style={s.sectionLabel}>Why Sweepr</div>
-        <h2 style={{ ...s.h2, marginBottom: 48 }}>Everything working for you,<br />not against you.</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        <h2 style={{ ...s.h2, marginBottom: isMobile ? 32 : 48 }}>
+          Everything working for you,{isMobile ? ' ' : <br />}
+          not against you.
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
           {perks.map(p => (
             <div
               key={p.title}
               style={{ ...s.card, transition: 'transform 0.25s, box-shadow 0.25s', cursor: 'default' }}
-              onMouseEnter={e => cardHov(e, true)}
-              onMouseLeave={e => cardHov(e, false)}
+              onMouseEnter={e => !isMobile && cardHov(e, true)}
+              onMouseLeave={e => !isMobile && cardHov(e, false)}
             >
-              <div style={{ fontSize: 36, marginBottom: 16 }}>{p.icon}</div>
+              <div style={{ fontSize: 32, marginBottom: 14 }}>{p.icon}</div>
               <div style={{
                 fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-                fontWeight: 700, fontSize: 18, marginBottom: 10,
+                fontWeight: 700, fontSize: 17, marginBottom: 8,
               }}>{p.title}</div>
               <div style={{ color: C.muted, fontSize: 15, lineHeight: 1.65 }}>{p.desc}</div>
             </div>
@@ -231,8 +262,8 @@ export default function JoinPage() {
       </section>
 
       {/* Earnings table */}
-      <section style={{ ...s.section, paddingBottom: 100 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
+      <section style={{ ...section, paddingBottom: isMobile ? 64 : 100 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'start' }}>
           <div>
             <div style={s.sectionLabel}>Your earnings</div>
             <h2 style={{ ...s.h2, marginBottom: 16 }}>Know exactly what you'll make.</h2>
@@ -241,7 +272,7 @@ export default function JoinPage() {
               Sweepr takes 25% to cover platform costs. You keep 75%.
             </p>
             <button
-              style={s.btnGreenLg}
+              style={{ ...s.btnGreenLg, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
               onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
               onClick={() => router.push('/apply')}
             >
@@ -249,38 +280,42 @@ export default function JoinPage() {
             </button>
           </div>
           <div style={{ ...s.card, padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              padding: '16px 24px', borderBottom: `1px solid ${C.border}`,
-              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-              fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '1px',
-            }}>
-              <span>Job type</span><span>Job total</span><span style={{ color: C.accent }}>Your payout</span>
-            </div>
-            {earnings.map((row, i) => (
-              <div key={row.type} style={{
-                padding: '16px 24px',
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{
+                padding: '16px 24px', borderBottom: `1px solid ${C.border}`,
                 display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-                borderBottom: i < earnings.length - 1 ? `1px solid ${C.border}` : 'none',
-                fontSize: 14,
-                background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
+                fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '1px',
+                minWidth: 320,
               }}>
-                <span style={{ color: C.muted }}>{row.type}</span>
-                <span>{row.total}</span>
-                <span style={{ color: C.accent, fontWeight: 600 }}>{row.payout}</span>
+                <span>Job type</span><span>Job total</span><span style={{ color: C.accent }}>Your payout</span>
               </div>
-            ))}
+              {earnings.map((row, i) => (
+                <div key={row.type} style={{
+                  padding: '14px 24px',
+                  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                  borderBottom: i < earnings.length - 1 ? `1px solid ${C.border}` : 'none',
+                  fontSize: 14,
+                  background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
+                  minWidth: 320,
+                }}>
+                  <span style={{ color: C.muted }}>{row.type}</span>
+                  <span>{row.total}</span>
+                  <span style={{ color: C.accent, fontWeight: 600 }}>{row.payout}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* How to join */}
-      <section style={{ ...s.section, paddingBottom: 100 }}>
+      <section style={{ ...section, paddingBottom: isMobile ? 64 : 100 }}>
         <div style={s.sectionLabel}>How to apply</div>
-        <h2 style={{ ...s.h2, marginBottom: 56 }}>Up and running in under a week.</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+        <h2 style={{ ...s.h2, marginBottom: isMobile ? 36 : 56 }}>Up and running in under a week.</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 24 : 20 }}>
           {steps.map((step, i) => (
             <div key={step.num} style={{ position: 'relative' }}>
-              {i < steps.length - 1 && (
+              {!isMobile && i < steps.length - 1 && (
                 <div style={{
                   position: 'absolute', top: 22, left: 'calc(100% - 10px)',
                   width: 'calc(100% - 28px)', height: 1,
@@ -294,13 +329,13 @@ export default function JoinPage() {
                   background: C.accentDim, border: `1.5px solid rgba(91,214,166,0.4)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-                  fontWeight: 800, fontSize: 14, color: C.accent, marginBottom: 20,
+                  fontWeight: 800, fontSize: 14, color: C.accent, marginBottom: 16,
                 }}>{step.num}</div>
                 <div style={{
                   fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-                  fontWeight: 700, fontSize: 17, marginBottom: 10,
+                  fontWeight: 700, fontSize: isMobile ? 15 : 17, marginBottom: 8,
                 }}>{step.title}</div>
-                <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.65 }}>{step.desc}</div>
+                <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.65 }}>{step.desc}</div>
               </div>
             </div>
           ))}
@@ -308,9 +343,9 @@ export default function JoinPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ ...s.section, paddingBottom: 100 }}>
+      <section style={{ ...section, paddingBottom: isMobile ? 64 : 100 }}>
         <div style={s.sectionLabel}>FAQ</div>
-        <h2 style={{ ...s.h2, marginBottom: 40 }}>Questions we get a lot.</h2>
+        <h2 style={{ ...s.h2, marginBottom: 36 }}>Questions we get a lot.</h2>
         <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {faqs.map((faq, i) => (
             <div
@@ -323,10 +358,10 @@ export default function JoinPage() {
             >
               <button
                 style={{
-                  width: '100%', padding: '20px 24px', background: 'none', border: 'none',
+                  width: '100%', padding: '18px 20px', background: 'none', border: 'none',
                   color: C.text, fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
-                  fontSize: 16, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
+                  fontSize: isMobile ? 14 : 16, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
                   borderBottom: openFaq === i ? `1px solid ${C.border}` : 'none',
                 }}
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
@@ -338,7 +373,7 @@ export default function JoinPage() {
                 }}>+</span>
               </button>
               {openFaq === i && (
-                <div style={{ padding: '20px 24px', color: C.muted, fontSize: 15, lineHeight: 1.7 }}>
+                <div style={{ padding: '16px 20px', color: C.muted, fontSize: 14, lineHeight: 1.7 }}>
                   {faq.a}
                 </div>
               )}
@@ -348,22 +383,22 @@ export default function JoinPage() {
       </section>
 
       {/* Bottom CTA */}
-      <section style={{ ...s.section, paddingBottom: 120 }}>
+      <section style={{ ...section, paddingBottom: isMobile ? 80 : 120 }}>
         <div style={{
           background: `linear-gradient(135deg, rgba(91,214,166,0.1) 0%, rgba(91,214,166,0.04) 100%)`,
           border: `1px solid rgba(91,214,166,0.25)`,
-          borderRadius: 24, padding: '72px 64px', textAlign: 'center',
+          borderRadius: 24, padding: isMobile ? '40px 24px' : '72px 64px', textAlign: 'center',
         }}>
           <div style={s.sectionLabel}>Ready?</div>
           <h2 style={{ ...s.h2, marginBottom: 16 }}>
             Start earning with Sweepr today.
           </h2>
-          <p style={{ color: C.muted, fontSize: 17, lineHeight: 1.7, marginBottom: 40, maxWidth: 480, margin: '0 auto 40px' }}>
+          <p style={{ color: C.muted, fontSize: isMobile ? 15 : 17, lineHeight: 1.7, marginBottom: 36, maxWidth: 480, margin: '0 auto 36px' }}>
             Applications take 2 minutes. Background checks are free.
             Most cleaners get their first job within a week of being approved.
           </p>
           <button
-            style={{ ...s.btnGreenLg, fontSize: 18, padding: '0 48px', height: 60 }}
+            style={{ ...s.btnGreenLg, fontSize: isMobile ? 16 : 18, padding: '0 36px', height: 56, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
             onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
             onClick={() => router.push('/apply')}
           >
@@ -377,12 +412,13 @@ export default function JoinPage() {
 
       {/* Footer */}
       <footer style={{
-        borderTop: `1px solid ${C.border}`, padding: '32px 48px',
+        borderTop: `1px solid ${C.border}`, padding: `28px ${px}`,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        maxWidth: 1100, margin: '0 auto', flexWrap: 'wrap', gap: 16,
+        maxWidth: 1100, margin: '0 auto',
+        flexDirection: isMobile ? 'column' : 'row', gap: 16, textAlign: isMobile ? 'center' : 'left',
       }}>
         <span style={{ color: C.muted, fontSize: 14 }}>© 2026 Sweepr Inc. · Denver, CO</span>
-        <div style={{ display: 'flex', gap: 24 }}>
+        <div style={{ display: 'flex', gap: 20 }}>
           <a href="/" style={{ color: C.muted, fontSize: 14, textDecoration: 'none' }}>Home</a>
           <a href="/login" style={{ color: C.muted, fontSize: 14, textDecoration: 'none' }}>Sign in</a>
           <a href="#" style={{ color: C.muted, fontSize: 14, textDecoration: 'none' }}>Privacy</a>
