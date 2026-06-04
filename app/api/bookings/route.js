@@ -6,7 +6,6 @@ import { quote } from '@/lib/pricing';
 export async function POST(request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const {
     property,
@@ -15,21 +14,59 @@ export async function POST(request) {
     date,
     time,
     preferredCleanerId,
-    paymentMethodId,   // Stripe PaymentMethod ID (saved at booking time)
+    paymentMethodId,
+    guestEmail,
+    guestName,
+    stripeCustomerId,
   } = await request.json();
 
   if (!property?.address || !date || !time) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const priceQuote = quote({ property, pickedAddonIds, recurrence });
   const service = createServiceClient();
+  let customerId;
 
-  // Upsert property (reuse if same address for this customer)
+  if (user) {
+    customerId = user.id;
+  } else if (guestEmail) {
+    // Create user account for guest (they can set a password later)
+    const { data: created, error: createErr } = await service.auth.admin.createUser({
+      email: guestEmail,
+      email_confirm: true,
+      user_metadata: { full_name: guestName || '' },
+    });
+
+    if (!createErr) {
+      customerId = created.user.id;
+    } else {
+      // User already exists — get their ID via magic link generation
+      const { data: linkData } = await service.auth.admin.generateLink({
+        type: 'magiclink',
+        email: guestEmail,
+      });
+      customerId = linkData?.user?.id;
+    }
+
+    if (!customerId) {
+      return NextResponse.json({ error: 'Failed to create guest account' }, { status: 500 });
+    }
+
+    // Ensure profile row exists, save Stripe customer ID if present
+    await service.from('profiles').upsert(
+      { id: customerId, ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}) },
+      { onConflict: 'id' }
+    );
+  } else {
+    return NextResponse.json({ error: 'Authentication or email required' }, { status: 401 });
+  }
+
+  const priceQuote = quote({ property, pickedAddonIds, recurrence });
+
   const { data: prop, error: propErr } = await service
     .from('properties')
     .insert({
-      customer_id:   user.id,
+      customer_id:   customerId,
       address:       property.address,
       sqft:          property.sqft   ?? null,
       beds:          property.beds   ?? null,
@@ -48,7 +85,7 @@ export async function POST(request) {
   const { data: booking, error: bookingErr } = await service
     .from('bookings')
     .insert({
-      customer_id:           user.id,
+      customer_id:           customerId,
       property_id:           prop.id,
       status:                'pending_match',
       base_price:            priceQuote.base_price,
@@ -70,7 +107,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   }
 
-  // Fan out job offers to active, cleared cleaners in the property zip (or all if no zip match)
+  // Fan out job offers to active, cleared cleaners
   const { data: cleaners } = await service
     .from('cleaners')
     .select('id')

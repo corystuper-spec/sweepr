@@ -269,8 +269,14 @@ function BookPageInner() {
   const [slotAvailability, setSlotAvailability] = useState(null);
   const [availLoading, setAvailLoading]   = useState(false);
 
+  // Guest contact (shown when not authenticated)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestName, setGuestName]   = useState('');
+
   // Step 5 — Payment
-  const [clientSecret, setClientSecret]   = useState('');
+  const [clientSecret, setClientSecret]       = useState('');
+  const [stripeCustomerId, setStripeCustomerId] = useState('');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const confirmPaymentRef = useRef(null);
 
@@ -291,6 +297,11 @@ function BookPageInner() {
       '.Tab': { border: '1px solid rgba(255,255,255,0.07)' },
     },
   };
+
+  // Check auth status on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setIsAuthenticated(!!user));
+  }, []);
 
   // Pre-fill from URL
   useEffect(() => {
@@ -320,13 +331,17 @@ function BookPageInner() {
   // Fetch Stripe SetupIntent when entering payment step
   useEffect(() => {
     if (step !== 5 || clientSecret || !stripePromise) return;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/login?redirect=/book'); return; }
-      fetch('/api/stripe/setup-intent', { method: 'POST' })
-        .then(r => r.json())
-        .then(d => { if (d.clientSecret) setClientSecret(d.clientSecret); })
-        .catch(console.error);
-    });
+    fetch('/api/stripe/setup-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(isAuthenticated ? {} : { guestEmail }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.clientSecret)     setClientSecret(d.clientSecret);
+        if (d.stripeCustomerId) setStripeCustomerId(d.stripeCustomerId);
+      })
+      .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -396,8 +411,10 @@ function BookPageInner() {
     }
 
     if (step === 4) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?redirect=/book'); return; }
+      if (!isAuthenticated) {
+        if (!guestEmail.trim()) { setError('Please enter your email to continue.'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) { setError('Please enter a valid email address.'); return; }
+      }
       setStep(5);
       return;
     }
@@ -429,11 +446,14 @@ function BookPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           property,
-          pickedAddonIds:  pickedAddons,
+          pickedAddonIds:   pickedAddons,
           recurrence,
           date,
           time,
-          paymentMethodId: pmId ?? undefined,
+          paymentMethodId:  pmId ?? undefined,
+          guestEmail:       isAuthenticated ? undefined : guestEmail,
+          guestName:        isAuthenticated ? undefined : guestName,
+          stripeCustomerId: isAuthenticated ? undefined : stripeCustomerId,
         }),
       });
       const data = await res.json();
@@ -452,23 +472,46 @@ function BookPageInner() {
   if (done) {
     return (
       <div style={s.page}>
-        <div style={{ ...s.container, paddingTop: 80, textAlign: 'center', padding: `80px ${px}` }}>
+        <div style={{ ...s.container, padding: `80px ${px} 60px`, textAlign: 'center' }}>
           <div style={{ fontSize: 64, marginBottom: 24 }}>✅</div>
           <h2 style={{ ...s.h2, marginBottom: 16 }}>Booking submitted!</h2>
           <p style={{ color: C.muted, fontSize: 16, lineHeight: 1.7, marginBottom: 32 }}>
             We're matching you with an available cleaner. You'll get notified when someone accepts —
             your card is only charged at that point.
           </p>
-          <div style={{ ...s.card, textAlign: 'left', marginBottom: 24 }}>
+
+          <div style={{ ...s.card, textAlign: 'left', marginBottom: 20 }}>
             <div style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>Booking ID</div>
             <div style={{ fontFamily: 'monospace', fontSize: 13, color: C.accent }}>{bookingId}</div>
           </div>
-          <button
-            style={{ ...s.btnGreen, display: 'inline-block', width: 'auto', padding: '0 32px' }}
-            onClick={() => router.push('/dashboard')}
-          >
-            View my bookings
-          </button>
+
+          {!isAuthenticated ? (
+            <div style={{ ...s.card, textAlign: 'left', marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Save your booking info</div>
+              <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+                Create a password to track this booking, rebook easily, and manage future cleanings — all your info is already saved.
+              </p>
+              <button
+                style={{ ...s.btnGreen, display: 'block', width: '100%' }}
+                onClick={() => router.push(`/login?mode=signup&email=${encodeURIComponent(guestEmail)}`)}
+              >
+                Create your account →
+              </button>
+              <button
+                style={{ ...s.btnBack, display: 'block', width: '100%', marginTop: 10, textAlign: 'center', height: 38 }}
+                onClick={() => router.push('/')}
+              >
+                No thanks, back to home
+              </button>
+            </div>
+          ) : (
+            <button
+              style={{ ...s.btnGreen, display: 'inline-block', width: 'auto', padding: '0 32px' }}
+              onClick={() => router.push('/dashboard')}
+            >
+              View my bookings
+            </button>
+          )}
         </div>
       </div>
     );
@@ -733,7 +776,7 @@ function BookPageInner() {
                     );
                   })}
                 </div>
-                {date && !avail && !availLoading && (
+                {!date && (
                   <p style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Select a date to see availability.</p>
                 )}
               </div>
@@ -748,6 +791,35 @@ function BookPageInner() {
             <div style={s.label}>Step 5 of {STEPS.length}</div>
             <h2 style={s.h2}>Review your booking</h2>
             <p style={s.sub}>Everything look right? Your card will be added in the next step — you're only charged when a cleaner accepts.</p>
+
+            {!isAuthenticated && (
+              <div style={s.card}>
+                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Your contact info</div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 14, color: C.muted, marginBottom: 8 }}>Full name</div>
+                  <input
+                    style={s.input}
+                    placeholder="Jane Smith"
+                    value={guestName}
+                    onChange={e => setGuestName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, color: C.muted, marginBottom: 8 }}>Email address <span style={{ color: C.error }}>*</span></div>
+                  <input
+                    type="email"
+                    style={s.input}
+                    placeholder="jane@example.com"
+                    value={guestEmail}
+                    onChange={e => setGuestEmail(e.target.value)}
+                  />
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>
+                  We'll send your booking confirmation here. You can create a password after booking to manage future cleanings.
+                </div>
+              </div>
+            )}
+
             <div style={s.card}>
               {[
                 ['Address',          addressInput],
