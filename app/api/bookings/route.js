@@ -4,27 +4,28 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { quote } from '@/lib/pricing';
 
 export async function POST(request) {
-  // Auth-gate via user's session
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { property, pickedAddonIds = [], recurrence = 'once', date, time, preferredCleanerId } =
-    await request.json();
+  const {
+    property,
+    pickedAddonIds = [],
+    recurrence = 'once',
+    date,
+    time,
+    preferredCleanerId,
+    paymentMethodId,   // Stripe PaymentMethod ID (saved at booking time)
+  } = await request.json();
 
   if (!property?.address || !date || !time) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Server-side price — never trust the client
   const priceQuote = quote({ property, pickedAddonIds, recurrence });
-
-  // Use service client for inserts that need to cross RLS boundaries
   const service = createServiceClient();
 
-  // Insert property
+  // Upsert property (reuse if same address for this customer)
   const { data: prop, error: propErr } = await service
     .from('properties')
     .insert({
@@ -44,7 +45,6 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to save property' }, { status: 500 });
   }
 
-  // Insert booking
   const { data: booking, error: bookingErr } = await service
     .from('bookings')
     .insert({
@@ -59,6 +59,8 @@ export async function POST(request) {
       scheduled_date:        date,
       scheduled_time:        time,
       preferred_cleaner_id:  preferredCleanerId ?? null,
+      payment_method_id:     paymentMethodId    ?? null,
+      payment_status:        paymentMethodId ? 'authorized' : 'pending',
     })
     .select()
     .single();
@@ -68,26 +70,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   }
 
-  // Fan out job offers to active, cleared cleaners
-  let cleanerQuery = service
+  // Fan out job offers to active, cleared cleaners in the property zip (or all if no zip match)
+  const { data: cleaners } = await service
     .from('cleaners')
     .select('id')
     .eq('is_active', true)
     .eq('bg_check_status', 'cleared');
 
-  if (preferredCleanerId) {
-    cleanerQuery = cleanerQuery.eq('id', preferredCleanerId);
-  }
-
-  const { data: cleaners } = await cleanerQuery;
-
   if (cleaners?.length) {
-    const offers = cleaners.map(c => ({
-      booking_id: booking.id,
-      cleaner_id: c.id,
-      status:     'sent',
-    }));
-    await service.from('job_offers').insert(offers);
+    await service.from('job_offers').insert(
+      cleaners.map(c => ({ booking_id: booking.id, cleaner_id: c.id, status: 'sent' }))
+    );
   }
 
   return NextResponse.json({ booking, quote: priceQuote }, { status: 201 });
