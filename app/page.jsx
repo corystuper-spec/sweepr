@@ -281,7 +281,7 @@ export default function LandingPage() {
   const footerCols = [
     { heading: 'Sweepr', links: ['How it works', 'Pricing', 'About us', 'Careers'] },
     { heading: 'Support', links: ['FAQ', 'Contact us', 'Privacy policy', 'Terms of service'] },
-    { heading: 'For cleaners', links: ['Apply now', 'Cleaner portal', 'Pay structure', 'Background check'] },
+    { heading: 'Join our team', links: ['Apply now', 'How it works', 'Pay structure', 'FAQ for cleaners'] },
   ];
 
   return (
@@ -293,15 +293,20 @@ export default function LandingPage() {
           <span style={styles.navLogoText}>Sweepr</span>
         </a>
         <ul style={styles.navLinks}>
-          {['How it works', 'Pricing', 'For cleaners', 'About us', 'FAQ'].map(link => (
-            <li key={link}>
+          {[
+            { label: 'How it works', href: '#how' },
+            { label: 'Pricing', href: '#pricing' },
+            { label: 'Join our team', href: '/join' },
+            { label: 'FAQ', href: '#faq' },
+          ].map(link => (
+            <li key={link.label}>
               <a
-                href="#"
-                style={{ ...styles.navLink, color: navHover === link ? C.text : C.muted }}
-                onMouseEnter={() => setNavHover(link)}
+                href={link.href}
+                style={{ ...styles.navLink, color: navHover === link.label ? C.text : C.muted }}
+                onMouseEnter={() => setNavHover(link.label)}
                 onMouseLeave={() => setNavHover(null)}
               >
-                {link}
+                {link.label}
               </a>
             </li>
           ))}
@@ -499,60 +504,39 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── For cleaners ── */}
-      <section style={styles.section}>
-        <div style={styles.cleanerGrid}>
+      {/* ── Join our team banner ── */}
+      <section style={{ ...styles.section, marginBottom: 80 }}>
+        <div style={{
+          background: `linear-gradient(135deg, rgba(91,214,166,0.08) 0%, rgba(91,214,166,0.03) 100%)`,
+          border: `1px solid rgba(91,214,166,0.2)`,
+          borderRadius: 24, padding: '56px 64px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 32, flexWrap: 'wrap',
+        }}>
           <div>
-            <div style={styles.sectionLabel}>For cleaners</div>
-            <h2 style={{ ...styles.h2, marginBottom: 16 }}>More jobs.<br />Less hassle.</h2>
-            <p style={{ color: C.muted, fontSize: 16, lineHeight: 1.7 }}>
-              Join Denver's fastest-growing cleaning platform. We handle the bookings,
-              payments, and customer support — you just show up and clean.
+            <div style={styles.sectionLabel}>Careers</div>
+            <h2 style={{ ...styles.h2, marginBottom: 12 }}>
+              Are you a professional cleaner<br />in the Denver area?
+            </h2>
+            <p style={{ color: C.muted, fontSize: 16, lineHeight: 1.7, maxWidth: 480 }}>
+              We're always looking for experienced, reliable cleaners to join the Sweepr network.
+              Flexible hours, steady income, no chasing clients.
             </p>
-            <div style={styles.cleanerFeatures}>
-              {cleanerFeatures.map(f => (
-                <div key={f.title} style={styles.cleanerFeature}>
-                  <div style={{ fontSize: 28 }}>{f.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{f.title}</div>
-                  <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>{f.desc}</div>
-                </div>
-              ))}
-            </div>
           </div>
-          <div style={styles.cleanerCard}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 8 }}>Ready to get started?</div>
-              <p style={{ color: C.muted, fontSize: 15, lineHeight: 1.6 }}>
-                Apply in minutes. Background check takes 2–3 business days.
-                Start getting jobs as soon as you're cleared.
-              </p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: C.muted, fontSize: 14 }}>
-                <span style={{ color: C.accent }}>✓</span> Avg $28–$35/hr in Denver
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: C.muted, fontSize: 14 }}>
-                <span style={{ color: C.accent }}>✓</span> Weekly direct deposit
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: C.muted, fontSize: 14 }}>
-                <span style={{ color: C.accent }}>✓</span> No minimum hours
-              </div>
-            </div>
-            <button
-              style={styles.btnGreenLg}
-              onMouseEnter={e => {
-                e.currentTarget.style.boxShadow = `0 8px 32px ${C.accentGlow}`;
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'none';
-              }}
-              onClick={() => router.push('/cleaner')}
-            >
-              Apply now →
-            </button>
-          </div>
+          <button
+            style={{ ...styles.btnGreenLg, flexShrink: 0, fontSize: 17, padding: '0 40px', height: 58 }}
+            onMouseEnter={e => {
+              e.currentTarget.style.boxShadow = `0 8px 32px ${C.accentGlow}`;
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'none';
+            }}
+            onClick={() => router.push('/join')}
+          >
+            Join our team →
+          </button>
         </div>
       </section>
 
