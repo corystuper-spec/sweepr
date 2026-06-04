@@ -261,3 +261,13 @@ create policy "Cleaners can upload job photos"
 create policy "Customers can view own job photos"
   on storage.objects for select
   using (bucket_id = 'job-photos' and auth.role() = 'authenticated');
+
+-- ============================================================
+-- HELPER RPC
+-- ============================================================
+create or replace function public.increment_jobs_completed(cleaner_id uuid)
+returns void language sql security definer as $$
+  update public.cleaners
+  set jobs_completed = jobs_completed + 1
+  where id = cleaner_id;
+$$;

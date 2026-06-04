@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { quote } from '@/lib/pricing';
 
 export async function POST(request) {
+  // Auth-gate via user's session
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,11 +18,14 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Compute quote server-side — never trust client price
+  // Server-side price — never trust the client
   const priceQuote = quote({ property, pickedAddonIds, recurrence });
 
-  // Upsert property
-  const { data: prop, error: propErr } = await supabase
+  // Use service client for inserts that need to cross RLS boundaries
+  const service = createServiceClient();
+
+  // Insert property
+  const { data: prop, error: propErr } = await service
     .from('properties')
     .insert({
       customer_id:   user.id,
@@ -41,7 +45,7 @@ export async function POST(request) {
   }
 
   // Insert booking
-  const { data: booking, error: bookingErr } = await supabase
+  const { data: booking, error: bookingErr } = await service
     .from('bookings')
     .insert({
       customer_id:           user.id,
@@ -64,8 +68,8 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   }
 
-  // Fan out job offers
-  let cleanerQuery = supabase
+  // Fan out job offers to active, cleared cleaners
+  let cleanerQuery = service
     .from('cleaners')
     .select('id')
     .eq('is_active', true)
@@ -83,7 +87,7 @@ export async function POST(request) {
       cleaner_id: c.id,
       status:     'sent',
     }));
-    await supabase.from('job_offers').insert(offers);
+    await service.from('job_offers').insert(offers);
   }
 
   return NextResponse.json({ booking, quote: priceQuote }, { status: 201 });

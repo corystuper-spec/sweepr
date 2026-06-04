@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export async function POST(request, { params }) {
   const supabase = await createClient();
@@ -10,8 +11,10 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify the caller is a cleaner
-  const { data: cleaner } = await supabase
+  const service = createServiceClient();
+
+  // Verify caller is a cleaner
+  const { data: cleaner } = await service
     .from('cleaners')
     .select('id')
     .eq('user_id', user.id)
@@ -21,8 +24,8 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Not a cleaner' }, { status: 403 });
   }
 
-  // Verify there's a sent offer for this cleaner on this booking
-  const { data: offer, error: offerErr } = await supabase
+  // Verify a sent offer exists for this cleaner on this booking
+  const { data: offer, error: offerErr } = await service
     .from('job_offers')
     .select('id')
     .eq('booking_id', bookingId)
@@ -35,31 +38,22 @@ export async function POST(request, { params }) {
   }
 
   // Atomically: accept this offer, expire all others, update booking
-  const [offerUpdate, expireOthers, bookingUpdate] = await Promise.all([
-    supabase
-      .from('job_offers')
-      .update({ status: 'accepted' })
-      .eq('id', offer.id),
-
-    supabase
-      .from('job_offers')
-      .update({ status: 'expired' })
-      .eq('booking_id', bookingId)
-      .neq('id', offer.id)
-      .eq('status', 'sent'),
-
-    supabase
-      .from('bookings')
-      .update({ assigned_cleaner_id: cleaner.id, status: 'matched' })
-      .eq('id', bookingId)
-      .select()
-      .single(),
+  await Promise.all([
+    service.from('job_offers').update({ status: 'accepted' }).eq('id', offer.id),
+    service.from('job_offers').update({ status: 'expired' }).eq('booking_id', bookingId).neq('id', offer.id).eq('status', 'sent'),
   ]);
 
-  if (bookingUpdate.error) {
-    console.error('Booking update error:', bookingUpdate.error);
+  const { data: booking, error: bookingErr } = await service
+    .from('bookings')
+    .update({ assigned_cleaner_id: cleaner.id, status: 'matched' })
+    .eq('id', bookingId)
+    .select()
+    .single();
+
+  if (bookingErr) {
+    console.error('Booking update error:', bookingErr);
     return NextResponse.json({ error: 'Failed to accept booking' }, { status: 500 });
   }
 
-  return NextResponse.json({ booking: bookingUpdate.data });
+  return NextResponse.json({ booking });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export async function POST(request, { params }) {
   const supabase = await createClient();
@@ -10,7 +11,9 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: cleaner } = await supabase
+  const service = createServiceClient();
+
+  const { data: cleaner } = await service
     .from('cleaners')
     .select('id')
     .eq('user_id', user.id)
@@ -20,7 +23,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Not a cleaner' }, { status: 403 });
   }
 
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await service
     .from('bookings')
     .update({ status: 'completed' })
     .eq('id', bookingId)
@@ -31,6 +34,9 @@ export async function POST(request, { params }) {
   if (error || !booking) {
     return NextResponse.json({ error: 'Failed to complete booking' }, { status: 500 });
   }
+
+  // Bump jobs_completed on the cleaner row
+  await service.rpc('increment_jobs_completed', { cleaner_id: cleaner.id }).maybeSingle();
 
   return NextResponse.json({ booking });
 }
