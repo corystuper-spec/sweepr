@@ -202,7 +202,6 @@ export default function ApplyPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
 
   // Step 0 — Personal
   const [firstName, setFirstName]     = useState('');
@@ -298,43 +297,12 @@ export default function ApplyPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
-      setDone(true);
+      router.push(`/onboard?email=${encodeURIComponent(email)}&name=${encodeURIComponent(firstName)}&appId=${data.application.id}`);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }
-
-  if (done) {
-    return (
-      <div style={s.page}>
-        <nav style={s.nav}>
-          <a href="/join" style={s.logo}>✦ Sweepr</a>
-        </nav>
-        <div style={{ ...s.body, textAlign: 'center', paddingTop: 80 }}>
-          <div style={{ fontSize: 64, marginBottom: 28 }}>🎉</div>
-          <h2 style={{ ...s.h2, marginBottom: 16 }}>Application submitted!</h2>
-          <p style={{ color: C.muted, fontSize: 16, lineHeight: 1.7, marginBottom: 12, maxWidth: 480, margin: '0 auto 12px' }}>
-            Thanks, {firstName}. We've received your application and will begin your background check shortly.
-          </p>
-          <p style={{ color: C.muted, fontSize: 15, lineHeight: 1.7, marginBottom: 40, maxWidth: 480, margin: '0 auto 40px' }}>
-            Most results come back within <strong style={{ color: C.text }}>2–3 business days</strong>.
-            We'll email you at <strong style={{ color: C.text }}>{email}</strong> as soon as you're approved.
-          </p>
-          <button
-            onClick={() => router.push('/')}
-            style={{
-              height: 50, borderRadius: 12, border: `1px solid ${C.border}`,
-              background: 'transparent', color: C.text, fontSize: 15,
-              cursor: 'pointer', padding: '0 28px', fontFamily: 'inherit',
-            }}
-          >
-            Back to home
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (

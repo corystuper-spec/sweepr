@@ -1,131 +1,78 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 const C = {
-  bg:        '#080A0C',
-  surface:   '#101316',
-  surfaceUp: '#181C20',
-  accent:    '#5BD6A6',
-  accentDim: 'rgba(91,214,166,0.12)',
-  border:    'rgba(255,255,255,0.07)',
-  text:      '#F3F4F2',
-  muted:     '#8A8F96',
-  error:     '#FF6B6B',
+  bg: '#080A0C', surface: '#101316', surfaceUp: '#181C20',
+  accent: '#5BD6A6', accentDim: 'rgba(91,214,166,0.12)', accentGlow: 'rgba(91,214,166,0.25)',
+  border: 'rgba(255,255,255,0.07)', text: '#F3F4F2', muted: '#8A8F96', error: '#FF6B6B',
 };
 
 const s = {
-  page: { background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'Hanken Grotesk', system-ui, sans-serif" },
-  nav: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '0 48px', height: 64,
-    borderBottom: `1px solid ${C.border}`,
-    background: 'rgba(8,10,12,0.9)', backdropFilter: 'blur(12px)',
-    position: 'sticky', top: 0, zIndex: 50,
+  page:  { background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'Hanken Grotesk', system-ui, sans-serif" },
+  nav:   { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', height: 64, borderBottom: `1px solid ${C.border}`, background: 'rgba(8,10,12,0.92)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 },
+  logo:  { fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontWeight: 800, fontSize: 20, color: C.text, textDecoration: 'none' },
+  wrap:  { maxWidth: 960, margin: '0 auto', padding: '40px 24px 80px' },
+  h1:    { fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: '-0.5px', marginBottom: 4 },
+  tabs:  { display: 'flex', gap: 4, background: C.surface, borderRadius: 12, padding: 4, marginBottom: 36, width: 'fit-content' },
+  tab:   (a) => ({ padding: '8px 20px', borderRadius: 9, border: 'none', background: a ? C.surfaceUp : 'transparent', color: a ? C.text : C.muted, fontWeight: a ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: a ? '0 1px 4px rgba(0,0,0,0.3)' : 'none' }),
+  card:  { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '24px', marginBottom: 14 },
+  stat:  { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '22px 20px' },
+  badge: (st) => {
+    const m = { pending_match: ['#FFAA32','rgba(255,170,50,0.12)','Matching…'], matched: [C.accent,C.accentDim,'Matched'], in_progress: ['#64A0FF','rgba(100,160,255,0.12)','In progress'], completed: ['#64C864','rgba(100,200,100,0.12)','Completed'], cancelled: [C.error,'rgba(255,100,100,0.12)','Cancelled'] };
+    const [color, bg, label] = m[st] || m.pending_match;
+    return { display:'inline-block', padding:'3px 10px', borderRadius:100, background:bg, color, fontSize:12, fontWeight:700, label };
   },
-  logo: {
-    fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-    fontWeight: 800, fontSize: 20, color: C.text, textDecoration: 'none',
-  },
-  container: { maxWidth: 900, margin: '0 auto', padding: '48px 24px' },
-  h1: {
-    fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-    fontWeight: 800, fontSize: 32, letterSpacing: '-1px', marginBottom: 8,
-  },
-  greeting: { color: C.muted, fontSize: 15, marginBottom: 40 },
-  statsRow: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 48 },
-  statCard: {
-    background: C.surface, border: `1px solid ${C.border}`,
-    borderRadius: 18, padding: '24px 20px',
-  },
-  statNum: {
-    fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-    fontWeight: 800, fontSize: 36, color: C.accent, lineHeight: 1, marginBottom: 6,
-  },
-  statLabel: { color: C.muted, fontSize: 14 },
-  sectionHeading: { fontWeight: 700, fontSize: 18, marginBottom: 16 },
-  card: {
-    background: C.surface, border: `1px solid ${C.border}`,
-    borderRadius: 18, padding: '24px', marginBottom: 16,
-  },
-  offerHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 },
-  offerAddress: { fontWeight: 700, fontSize: 16, marginBottom: 6 },
-  offerMeta: { color: C.muted, fontSize: 14, lineHeight: 1.6 },
-  earningsRow: { display: 'flex', gap: 20, marginTop: 16, flexWrap: 'wrap' },
-  earningPill: (variant) => ({
-    padding: '8px 16px', borderRadius: 10,
-    background: variant === 'primary' ? C.accentDim : C.surfaceUp,
-    border: `1px solid ${variant === 'primary' ? 'rgba(91,214,166,0.3)' : C.border}`,
-    fontSize: 14, color: variant === 'primary' ? C.accent : C.text, fontWeight: 600,
-  }),
-  btnGreen: {
-    height: 42, borderRadius: 10, border: 'none', background: C.accent,
-    color: '#080A0C', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-    padding: '0 24px', transition: 'opacity 0.2s',
-  },
-  btnSecondary: {
-    height: 42, borderRadius: 10, border: `1px solid ${C.border}`,
-    background: C.surfaceUp, color: C.text, fontWeight: 600, fontSize: 14,
-    cursor: 'pointer', padding: '0 20px',
-  },
-  uploadZone: {
-    border: `2px dashed ${C.border}`, borderRadius: 12, padding: '24px',
-    textAlign: 'center', cursor: 'pointer', background: C.surfaceUp,
-    color: C.muted, fontSize: 14, marginTop: 12,
-  },
-  photoGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-    gap: 8, marginTop: 12,
-  },
-  photoThumb: {
-    aspectRatio: '1', borderRadius: 8, background: C.surfaceUp,
-    border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center',
-    justifyContent: 'center', fontSize: 24, overflow: 'hidden',
-  },
-  emptyState: {
-    background: C.surface, border: `1px solid ${C.border}`,
-    borderRadius: 18, padding: '48px 24px', textAlign: 'center',
-    color: C.muted, fontSize: 15,
-  },
+  btn:   (v) => ({ height: 38, borderRadius: 10, border: v === 'primary' ? 'none' : `1px solid ${C.border}`, background: v === 'primary' ? C.accent : C.surfaceUp, color: v === 'primary' ? '#080A0C' : C.text, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '0 16px', fontFamily: 'inherit', transition: 'opacity 0.2s' }),
+  input: { width: '100%', height: 46, borderRadius: 10, border: `1px solid ${C.border}`, background: C.surfaceUp, color: C.text, fontSize: 14, padding: '0 12px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' },
+  label: { fontSize: 12, color: C.muted, marginBottom: 6, display: 'block', fontWeight: 500 },
 };
 
-function fmt(n) { return `$${Number(n).toFixed(2)}`; }
+function fmt(n) { return `$${Number(n || 0).toFixed(2)}`; }
+
+function WelcomeBanner({ name, onDismiss }) {
+  return (
+    <div style={{ background: C.accentDim, border: `1px solid rgba(91,214,166,0.3)`, borderRadius: 16, padding: '20px 24px', marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>🎉 Welcome to Sweepr, {name}!</div>
+        <div style={{ color: C.muted, fontSize: 14 }}>Your account is active. Job offers will appear here once you're background-checked and cleared.</div>
+      </div>
+      <button onClick={onDismiss} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+    </div>
+  );
+}
+
+function StatCard({ num, label, sub }) {
+  return (
+    <div style={s.stat}>
+      <div style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontWeight: 800, fontSize: 32, color: C.accent, lineHeight: 1, marginBottom: 6 }}>{num}</div>
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{label}</div>
+      {sub && <div style={{ color: C.muted, fontSize: 12 }}>{sub}</div>}
+    </div>
+  );
+}
 
 function OfferCard({ offer, onAccept }) {
-  const [accepting, setAccepting] = useState(false);
-  const booking = offer.bookings;
-  const prop    = booking?.properties;
-
-  async function handleAccept() {
-    setAccepting(true);
-    await onAccept(booking.id);
-    setAccepting(false);
-  }
-
+  const [busy, setBusy] = useState(false);
+  const b = offer.bookings;
+  const p = b?.properties;
+  async function accept() { setBusy(true); await onAccept(b.id); setBusy(false); }
   return (
-    <div style={s.card}>
-      <div style={s.offerHeader}>
+    <div style={{ ...s.card, border: `1px solid rgba(91,214,166,0.2)` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
-          <div style={s.offerAddress}>{prop?.address || 'Address unavailable'}</div>
-          <div style={s.offerMeta}>
-            {prop?.sqft} sqft · {prop?.beds} bed · {prop?.baths} bath
-          </div>
-          <div style={s.offerMeta}>
-            {booking?.scheduled_date} at {booking?.scheduled_time}
-          </div>
-          <div style={s.earningsRow}>
-            <div style={s.earningPill('secondary')}>Total: {fmt(booking?.total_price)}</div>
-            <div style={s.earningPill('primary')}>Your cut: {fmt(booking?.total_price * 0.75)}</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{p?.address || 'Address unavailable'}</div>
+          <div style={{ color: C.muted, fontSize: 14, marginBottom: 4 }}>{p?.sqft} sqft · {p?.beds} bed · {p?.baths} bath</div>
+          <div style={{ color: C.muted, fontSize: 14, marginBottom: 14 }}>{b?.scheduled_date} at {b?.scheduled_time}</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ padding: '6px 14px', borderRadius: 8, background: C.surfaceUp, border: `1px solid ${C.border}`, fontSize: 13 }}>Job total: <strong>{fmt(b?.total_price)}</strong></div>
+            <div style={{ padding: '6px 14px', borderRadius: 8, background: C.accentDim, border: `1px solid rgba(91,214,166,0.3)`, fontSize: 13, color: C.accent, fontWeight: 600 }}>Your payout: {fmt(b?.total_price * 0.75)}</div>
           </div>
         </div>
-        <button
-          style={{ ...s.btnGreen, opacity: accepting ? 0.6 : 1 }}
-          onClick={handleAccept}
-          disabled={accepting}
-        >
-          {accepting ? 'Accepting…' : 'Accept job'}
+        <button style={{ ...s.btn('primary'), height: 44, padding: '0 24px', opacity: busy ? 0.6 : 1 }} onClick={accept} disabled={busy}>
+          {busy ? 'Accepting…' : 'Accept job'}
         </button>
       </div>
     </div>
@@ -137,298 +84,273 @@ function JobCard({ booking, supabase, cleanerId, onRefresh }) {
   const [completing, setCompleting] = useState(false);
   const [photos, setPhotos] = useState([]);
   const fileRef = useRef(null);
-
-  const prop = booking.properties;
+  const p = booking.properties;
+  const bdg = s.badge(booking.status);
 
   useEffect(() => {
-    supabase
-      .from('job_photos')
-      .select('*')
-      .eq('booking_id', booking.id)
-      .then(({ data }) => setPhotos(data || []));
+    supabase?.from('job_photos').select('*').eq('booking_id', booking.id).then(({ data }) => setPhotos(data || []));
   }, [booking.id, supabase]);
 
-  async function handleUpload(e) {
+  async function upload(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
     setUploading(true);
     for (const file of files) {
       const path = `${booking.id}/${Date.now()}-${file.name}`;
-      const { error: storageErr } = await supabase.storage.from('job-photos').upload(path, file);
-      if (!storageErr) {
-        await supabase.from('job_photos').insert({
-          booking_id: booking.id,
-          cleaner_id: cleanerId,
-          storage_path: path,
-        });
-      }
+      const { error } = await supabase.storage.from('job-photos').upload(path, file);
+      if (!error) await supabase.from('job_photos').insert({ booking_id: booking.id, cleaner_id: cleanerId, storage_path: path });
     }
     const { data } = await supabase.from('job_photos').select('*').eq('booking_id', booking.id);
     setPhotos(data || []);
     setUploading(false);
   }
 
-  async function handleComplete() {
+  async function complete() {
     setCompleting(true);
-    const res = await fetch(`/api/bookings/${booking.id}/complete`, { method: 'POST' });
-    if (res.ok) onRefresh();
+    await fetch(`/api/bookings/${booking.id}/complete`, { method: 'POST' });
+    onRefresh();
     setCompleting(false);
   }
 
   return (
     <div style={s.card}>
-      <div style={s.offerHeader}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={s.offerAddress}>{prop?.address}</div>
-            <span style={{
-              padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 700,
-              background: booking.status === 'in_progress'
-                ? 'rgba(100,160,255,0.12)' : C.accentDim,
-              color: booking.status === 'in_progress' ? '#64A0FF' : C.accent,
-            }}>
-              {booking.status === 'in_progress' ? 'In progress' : 'Matched'}
-            </span>
-          </div>
-          <div style={s.offerMeta}>{booking.scheduled_date} at {booking.scheduled_time}</div>
-          <div style={{ ...s.offerMeta, color: C.accent, fontWeight: 600, marginTop: 4 }}>
-            Earnings: {fmt(booking.total_price * 0.75)}
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{p?.address}</div>
+          <div style={{ color: C.muted, fontSize: 14 }}>{booking.scheduled_date} at {booking.scheduled_time}</div>
+          <div style={{ color: C.accent, fontWeight: 600, fontSize: 14, marginTop: 4 }}>Payout: {fmt(booking.total_price * 0.75)}</div>
         </div>
+        <span style={bdg}>{bdg.label}</span>
       </div>
 
-      {/* Photo upload */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Job photos</div>
-        {photos.length > 0 && (
-          <div style={s.photoGrid}>
-            {photos.map(p => (
-              <div key={p.id} style={s.photoThumb}>📸</div>
-            ))}
-          </div>
-        )}
-        <div
-          style={s.uploadZone}
-          onClick={() => fileRef.current?.click()}
-        >
-          {uploading ? 'Uploading…' : '+ Upload photos'}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleUpload}
-        />
-      </div>
-
-      {/* Complete button */}
       {booking.status !== 'completed' && (
-        <div style={{ marginTop: 16 }}>
-          <button
-            style={{ ...s.btnGreen, opacity: completing ? 0.6 : 1 }}
-            onClick={handleComplete}
-            disabled={completing}
-          >
-            {completing ? 'Marking complete…' : '✓ Mark job complete'}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button style={s.btn('secondary')} onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? 'Uploading…' : '📸 Upload photos'}
           </button>
+          <input ref={fileRef} type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={upload} />
+          <button style={{ ...s.btn('primary'), opacity: completing ? 0.6 : 1 }} onClick={complete} disabled={completing}>
+            {completing ? 'Updating…' : '✓ Mark complete'}
+          </button>
+        </div>
+      )}
+
+      {photos.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          {photos.map(ph => (
+            <div key={ph.id} style={{ width: 64, height: 64, borderRadius: 8, background: C.surfaceUp, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📸</div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-export default function CleanerPage() {
-  const router  = useRouter();
-  const [supabase] = useState(() => typeof window !== 'undefined' ? createClient() : null);
+function ProfileTab({ cleanerRow, profile, supabase, onRefresh }) {
+  const [bio, setBio]   = useState(cleanerRow?.bio || '');
+  const [zips, setZips] = useState((cleanerRow?.service_zips || []).join(', '));
+  const [phone, setPhone] = useState(profile?.full_name || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved]   = useState(false);
 
+  async function save() {
+    setSaving(true);
+    await Promise.all([
+      supabase.from('cleaners').update({ bio, service_zips: zips.split(',').map(z => z.trim()).filter(Boolean) }).eq('id', cleanerRow.id),
+    ]);
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    onRefresh();
+  }
+
+  return (
+    <div>
+      <div style={s.card}>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Your profile</div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={s.label}>Bio (shown to customers after matching)</label>
+          <textarea value={bio} onChange={e => setBio(e.target.value)} style={{ ...s.input, height: 'auto', minHeight: 90, padding: '10px 12px', resize: 'vertical', lineHeight: 1.6 }} placeholder="Tell customers a bit about yourself…" />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={s.label}>Zip codes you serve (comma-separated)</label>
+          <input style={s.input} value={zips} onChange={e => setZips(e.target.value)} placeholder="80202, 80205, 80218" />
+        </div>
+        <button style={{ ...s.btn('primary'), height: 44, padding: '0 28px' }} onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : saved ? '✓ Saved!' : 'Save changes'}
+        </button>
+      </div>
+
+      <div style={s.card}>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Account status</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            ['Background check', cleanerRow?.bg_check_status === 'cleared' ? '✓ Cleared' : cleanerRow?.bg_check_status === 'failed' ? '✗ Failed' : '⏳ Pending', cleanerRow?.bg_check_status === 'cleared' ? C.accent : C.muted],
+            ['Account active', cleanerRow?.is_active ? '✓ Active' : '✗ Inactive', cleanerRow?.is_active ? C.accent : C.muted],
+            ['Jobs completed', cleanerRow?.jobs_completed ?? 0, C.text],
+            ['Average rating', cleanerRow?.rating > 0 ? `${Number(cleanerRow.rating).toFixed(1)} ⭐` : 'No ratings yet', C.text],
+          ].map(([k, v, color]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${C.border}`, fontSize: 14 }}>
+              <span style={{ color: C.muted }}>{k}</span>
+              <span style={{ color, fontWeight: 600 }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CleanerDashboardInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const welcome = params.get('welcome') === '1';
+
+  const [supabase]      = useState(() => typeof window !== 'undefined' ? createClient() : null);
+  const [tab, setTab]   = useState('offers');
   const [profile, setProfile]     = useState(null);
   const [cleanerRow, setCleanerRow] = useState(null);
   const [offers, setOffers]       = useState([]);
   const [jobs, setJobs]           = useState([]);
-  const [stats, setStats]         = useState({ jobs: 0, earned: 0, rating: 0 });
   const [loading, setLoading]     = useState(true);
+  const [showWelcome, setShowWelcome] = useState(welcome);
 
-  useEffect(() => {
-    if (supabase) init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  useEffect(() => { if (supabase) init(); }, [supabase]);
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push('/login?redirect=/cleaner'); return; }
 
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    const [{ data: prof }, { data: cl }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('cleaners').select('*').eq('user_id', user.id).single(),
+    ]);
+
     setProfile(prof);
-
-    if (prof?.role !== 'cleaner') {
-      router.push('/dashboard');
-      return;
-    }
-
-    const { data: cl } = await supabase.from('cleaners').select('*').eq('user_id', user.id).single();
     setCleanerRow(cl);
 
     if (cl) {
-      await Promise.all([fetchOffers(cl.id), fetchJobs(cl.id), computeStats(cl)]);
+      await Promise.all([fetchOffers(cl.id), fetchJobs(cl.id)]);
     }
     setLoading(false);
   }
 
-  async function fetchOffers(cleanerId) {
-    const { data } = await supabase
-      .from('job_offers')
-      .select(`
-        *,
-        bookings (
-          id, total_price, scheduled_date, scheduled_time, status,
-          properties (address, sqft, beds, baths)
-        )
-      `)
-      .eq('cleaner_id', cleanerId)
-      .eq('status', 'sent');
+  async function fetchOffers(cid) {
+    const { data } = await supabase.from('job_offers').select('*, bookings(id, total_price, scheduled_date, scheduled_time, properties(address, sqft, beds, baths))').eq('cleaner_id', cid).eq('status', 'sent');
     setOffers(data || []);
   }
 
-  async function fetchJobs(cleanerId) {
-    const { data } = await supabase
-      .from('bookings')
-      .select('*, properties (address, sqft, beds, baths)')
-      .eq('assigned_cleaner_id', cleanerId)
-      .in('status', ['matched', 'in_progress', 'completed'])
-      .order('scheduled_date', { ascending: false });
+  async function fetchJobs(cid) {
+    const { data } = await supabase.from('bookings').select('*, properties(address, sqft, beds, baths)').eq('assigned_cleaner_id', cid).in('status', ['matched','in_progress','completed']).order('scheduled_date', { ascending: false });
     setJobs(data || []);
   }
 
-  function computeStats(cl) {
-    setStats({
-      jobs:   cl.jobs_completed || 0,
-      earned: (cl.jobs_completed || 0) * 120, // rough estimate
-      rating: cl.rating || 0,
-    });
-  }
-
   async function acceptOffer(bookingId) {
-    const res = await fetch(`/api/bookings/${bookingId}/accept`, { method: 'POST' });
-    if (res.ok) {
-      await fetchOffers(cleanerRow.id);
-      await fetchJobs(cleanerRow.id);
-    }
+    await fetch(`/api/bookings/${bookingId}/accept`, { method: 'POST' });
+    await Promise.all([fetchOffers(cleanerRow.id), fetchJobs(cleanerRow.id)]);
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    router.push('/');
-  }
-
-  const activeJobs = jobs.filter(j => ['matched', 'in_progress'].includes(j.status));
+  const earned = jobs.filter(j => j.status === 'completed').reduce((s, j) => s + j.total_price * 0.75, 0);
+  const activeJobs = jobs.filter(j => ['matched','in_progress'].includes(j.status));
+  const doneJobs   = jobs.filter(j => j.status === 'completed');
 
   return (
     <div style={s.page}>
       <nav style={s.nav}>
         <a href="/" style={s.logo}>✦ Sweepr</a>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span style={{ color: C.muted, fontSize: 14 }}>Cleaner portal</span>
-          <button
-            onClick={signOut}
-            style={{
-              height: 38, borderRadius: 10, border: `1px solid ${C.border}`,
-              background: 'transparent', color: C.muted, fontSize: 14, cursor: 'pointer',
-              padding: '0 16px',
-            }}
-          >Sign out</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {profile?.role === 'admin' && (
+            <button style={s.btn('secondary')} onClick={() => router.push('/admin')}>Admin</button>
+          )}
+          <span style={{ color: C.muted, fontSize: 14 }}>{profile?.full_name}</span>
+          <button style={s.btn('secondary')} onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}>Sign out</button>
         </div>
       </nav>
 
-      <div style={s.container}>
+      <div style={s.wrap}>
         {loading ? (
           <div style={{ color: C.muted }}>Loading…</div>
         ) : (
           <>
-            <h1 style={s.h1}>
-              Welcome back, {profile?.full_name?.split(' ')[0] || 'Cleaner'} 👋
-            </h1>
-            <p style={s.greeting}>
-              {cleanerRow?.bg_check_status === 'cleared'
-                ? 'You\'re cleared to accept jobs.'
-                : cleanerRow?.bg_check_status === 'pending'
-                ? 'Your background check is pending — you\'ll be notified when cleared.'
-                : 'Your background check status needs attention. Contact support.'}
+            {showWelcome && <WelcomeBanner name={profile?.full_name?.split(' ')[0]} onDismiss={() => setShowWelcome(false)} />}
+
+            <h1 style={s.h1}>Cleaner portal</h1>
+            <p style={{ color: C.muted, fontSize: 14, marginBottom: 28 }}>
+              {cleanerRow?.bg_check_status === 'cleared' ? 'You\'re cleared and active.' : cleanerRow?.bg_check_status === 'pending' ? 'Background check pending — hang tight.' : 'Contact support about your account status.'}
             </p>
 
             {/* Stats */}
-            <div style={s.statsRow}>
-              <div style={s.statCard}>
-                <div style={s.statNum}>{stats.jobs}</div>
-                <div style={s.statLabel}>Jobs completed</div>
-              </div>
-              <div style={s.statCard}>
-                <div style={s.statNum}>${(stats.earned).toLocaleString()}</div>
-                <div style={s.statLabel}>Total earned (est.)</div>
-              </div>
-              <div style={s.statCard}>
-                <div style={s.statNum}>{stats.rating > 0 ? stats.rating.toFixed(1) : '—'}</div>
-                <div style={s.statLabel}>Average rating</div>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 36 }}>
+              <StatCard num={offers.length} label="Open offers" sub="Waiting for you" />
+              <StatCard num={activeJobs.length} label="Active jobs" sub="In progress" />
+              <StatCard num={cleanerRow?.jobs_completed ?? 0} label="Jobs done" sub="All time" />
+              <StatCard num={`$${Math.round(earned)}`} label="Earned" sub="This period" />
             </div>
 
-            {/* Open offers */}
-            <div style={{ marginBottom: 48 }}>
-              <div style={s.sectionHeading}>
-                Open offers
-                {offers.length > 0 && (
-                  <span style={{
-                    marginLeft: 10, fontSize: 12, fontWeight: 700, padding: '3px 8px',
-                    borderRadius: 100, background: C.accentDim, color: C.accent,
-                  }}>{offers.length}</span>
-                )}
-              </div>
-              {offers.length === 0 ? (
-                <div style={s.emptyState}>No open offers right now — check back soon.</div>
-              ) : (
-                offers.map(offer => (
-                  <OfferCard key={offer.id} offer={offer} onAccept={acceptOffer} />
-                ))
-              )}
+            {/* Tabs */}
+            <div style={s.tabs}>
+              {[['offers', `Offers${offers.length ? ` (${offers.length})` : ''}`], ['active', 'Active jobs'], ['history', 'History'], ['profile', 'Profile']].map(([id, label]) => (
+                <button key={id} style={s.tab(tab === id)} onClick={() => setTab(id)}>{label}</button>
+              ))}
             </div>
 
-            {/* Active jobs */}
-            <div style={{ marginBottom: 48 }}>
-              <div style={s.sectionHeading}>Active jobs</div>
-              {activeJobs.length === 0 ? (
-                <div style={s.emptyState}>No active jobs. Accept an offer above to get started.</div>
-              ) : (
-                activeJobs.map(job => (
-                  <JobCard
-                    key={job.id}
-                    booking={job}
-                    supabase={supabase}
-                    cleanerId={cleanerRow?.id}
-                    onRefresh={() => fetchJobs(cleanerRow?.id)}
-                  />
-                ))
-              )}
-            </div>
-
-            {/* Completed jobs */}
-            {jobs.filter(j => j.status === 'completed').length > 0 && (
+            {/* Offers */}
+            {tab === 'offers' && (
               <div>
-                <div style={s.sectionHeading}>Completed jobs</div>
-                {jobs.filter(j => j.status === 'completed').map(job => (
-                  <JobCard
-                    key={job.id}
-                    booking={job}
-                    supabase={supabase}
-                    cleanerId={cleanerRow?.id}
-                    onRefresh={() => fetchJobs(cleanerRow?.id)}
-                  />
+                {offers.length === 0 ? (
+                  <div style={{ ...s.card, textAlign: 'center', padding: '48px 24px', color: C.muted }}>
+                    No open offers right now. Check back soon — new jobs come in daily.
+                  </div>
+                ) : offers.map(o => (
+                  <OfferCard key={o.id} offer={o} onAccept={acceptOffer} />
                 ))}
               </div>
+            )}
+
+            {/* Active jobs */}
+            {tab === 'active' && (
+              <div>
+                {activeJobs.length === 0 ? (
+                  <div style={{ ...s.card, textAlign: 'center', padding: '48px 24px', color: C.muted }}>No active jobs. Accept an offer to get started.</div>
+                ) : activeJobs.map(j => (
+                  <JobCard key={j.id} booking={j} supabase={supabase} cleanerId={cleanerRow?.id} onRefresh={() => fetchJobs(cleanerRow?.id)} />
+                ))}
+              </div>
+            )}
+
+            {/* History */}
+            {tab === 'history' && (
+              <div>
+                {doneJobs.length === 0 ? (
+                  <div style={{ ...s.card, textAlign: 'center', padding: '48px 24px', color: C.muted }}>No completed jobs yet.</div>
+                ) : doneJobs.map(j => (
+                  <JobCard key={j.id} booking={j} supabase={supabase} cleanerId={cleanerRow?.id} onRefresh={() => fetchJobs(cleanerRow?.id)} />
+                ))}
+                {doneJobs.length > 0 && (
+                  <div style={{ ...s.card, marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
+                      <span style={{ color: C.muted }}>Total earned</span>
+                      <span style={{ fontWeight: 700, color: C.accent }}>{fmt(earned)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Profile */}
+            {tab === 'profile' && cleanerRow && (
+              <ProfileTab cleanerRow={cleanerRow} profile={profile} supabase={supabase} onRefresh={init} />
             )}
           </>
         )}
       </div>
     </div>
+  );
+}
+
+export default function CleanerPage() {
+  return (
+    <Suspense fallback={<div style={{ background: '#080A0C', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8F96' }}>Loading…</div>}>
+      <CleanerDashboardInner />
+    </Suspense>
   );
 }
