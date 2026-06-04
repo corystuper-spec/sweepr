@@ -263,6 +263,40 @@ create policy "Customers can view own job photos"
   using (bucket_id = 'job-photos' and auth.role() = 'authenticated');
 
 -- ============================================================
+-- CLEANER APPLICATIONS
+-- ============================================================
+create table public.cleaner_applications (
+  id               uuid primary key default uuid_generate_v4(),
+  first_name       text not null,
+  last_name        text not null,
+  dob              date not null,
+  email            text not null,
+  phone            text not null,
+  street           text not null,
+  city             text not null,
+  state            text not null,
+  zip              text not null,
+  id_type          text not null,
+  id_number        text not null,
+  ssn_last4        text not null,          -- only last 4 digits stored
+  work_authorized  boolean not null default false,
+  experience       text,
+  service_types    text[] not null default '{}',
+  service_zips     text[] not null default '{}',
+  bio              text,
+  status           text not null default 'pending'
+                     check (status in ('pending', 'approved', 'rejected')),
+  created_at       timestamptz not null default now()
+);
+
+-- Only admins can read applications; no public access
+alter table public.cleaner_applications enable row level security;
+
+create policy "Admins can manage applications"
+  on public.cleaner_applications for all
+  using (public.current_role() = 'admin');
+
+-- ============================================================
 -- HELPER RPC
 -- ============================================================
 create or replace function public.increment_jobs_completed(cleaner_id uuid)

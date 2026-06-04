@@ -87,6 +87,7 @@ export default function JoinPage() {
     { icon: '💵', title: '$28–$38 / hour', desc: 'Among the highest rates for independent cleaners in Denver. Your earnings grow with your rating.' },
     { icon: '📅', title: 'You set your schedule', desc: "Accept only the jobs that fit your life. No minimums, no mandated hours, no boss breathing down your neck." },
     { icon: '⚡', title: 'Same-week payouts', desc: 'Get paid automatically every week via direct deposit. No invoicing, no waiting 30 days.' },
+    { icon: '🤝', title: '100% of your tips', desc: 'Every tip a customer leaves goes directly to you — Sweepr takes nothing. Great work should be fully rewarded.' },
     { icon: '📍', title: 'Jobs near you', desc: 'Tell us your zip codes and we send you jobs in your area. No long commutes.' },
     { icon: '🛡️', title: "We handle the hard stuff", desc: 'Customer support, scheduling, payment disputes — all on us. You just focus on doing great work.' },
     { icon: '📈', title: 'Build your reputation', desc: 'Earn 5-star reviews, build a client base, and unlock access to higher-value recurring jobs.' },
@@ -132,7 +133,8 @@ export default function JoinPage() {
     { type: '3 bed / 2 bath', total: '$145–$185', payout: '$109–$139' },
     { type: '4+ bed home', total: '$185–$260', payout: '$139–$195' },
     { type: 'Deep clean add-on', total: '+$60', payout: '+$45' },
-    { type: 'Recurring booking', total: '−10–15%', payout: 'Offset by volume' },
+    { type: 'Recurring booking', total: '-10-15%', payout: 'Offset by volume' },
+    { type: 'Customer tips', total: '100% yours', payout: '100% yours' },
   ];
 
   return (
@@ -151,7 +153,7 @@ export default function JoinPage() {
           <button
             style={s.btnGreen}
             onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
-            onClick={() => router.push('/login?role=cleaner')}
+            onClick={() => router.push('/apply')}
           >
             Apply now
           </button>
@@ -174,7 +176,7 @@ export default function JoinPage() {
             <button
               style={s.btnGreenLg}
               onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
-              onClick={() => router.push('/login?role=cleaner')}
+              onClick={() => router.push('/apply')}
             >
               Apply now — it's free →
             </button>
@@ -188,6 +190,7 @@ export default function JoinPage() {
             { num: '$28–$38', label: 'Per hour average' },
             { num: '2–3 days', label: 'Background check' },
             { num: '75%', label: 'You keep per job' },
+            { num: '100%', label: 'Of your tips' },
             { num: 'Weekly', label: 'Direct deposit' },
           ].map(stat => (
             <div key={stat.label} style={{
@@ -240,7 +243,7 @@ export default function JoinPage() {
             <button
               style={s.btnGreenLg}
               onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
-              onClick={() => router.push('/login?role=cleaner')}
+              onClick={() => router.push('/apply')}
             >
               Start earning →
             </button>
@@ -362,7 +365,7 @@ export default function JoinPage() {
           <button
             style={{ ...s.btnGreenLg, fontSize: 18, padding: '0 48px', height: 60 }}
             onMouseEnter={e => hov(e, true)} onMouseLeave={e => hov(e, false)}
-            onClick={() => router.push('/login?role=cleaner')}
+            onClick={() => router.push('/apply')}
           >
             Apply now — it's free →
           </button>
